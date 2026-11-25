@@ -80,10 +80,10 @@ CI khởi động v2 với `MOCK_ERROR_RATE=0`, đợi `/health` trả 200, rồ
 
 ### 4.1 Screenshot
 
-- [ ] `grafana-dashboard.png` từ dashboard Golden Signals khi đang có tải. [Grafana](http://localhost:3000/d/day14-agent-overview/day-14-ai-agent-overview)
-- [ ] `jaeger-slow-trace.png` mở span `chat mock-llm-small`. [Trace chậm](http://localhost:16686/trace/c7f910db2015921506afd2f2701d10db)
-- [ ] `jaeger-error-trace.png` mở event `exception` của span `chat mock-llm-small`. [Trace lỗi](http://localhost:16686/trace/c8a43205f84199ddbae5569369da4071)
-- [ ] `prometheus-alert-firing.png` hiển thị ít nhất hai alert cùng **Firing**. [Prometheus Alerts](http://localhost:9090/alerts)
+- [x] [Ảnh Grafana](screenshots/grafana-dashboard.png) chụp khi đang có tải, hiển thị 15,0 req/s và p95 1,90 giây.
+- [x] [Ảnh trace chậm](screenshots/jaeger-slow-trace.png) có timeline cho thấy span `chat mock-llm-small` chiếm phần lớn thời lượng. [Trace chậm trong Jaeger](http://localhost:16686/trace/c7f910db2015921506afd2f2701d10db)
+- [x] [Ảnh trace lỗi](screenshots/jaeger-error-trace.png) hiển thị HTTP 503 và event `exception` trong `agent.run`. [Trace lỗi trong Jaeger](http://localhost:16686/trace/c8a43205f84199ddbae5569369da4071)
+- [x] [Ảnh Prometheus](screenshots/prometheus-alert-firing.png) hiển thị `AgentHighErrorRate` và `AgentHighLatencyP95` cùng **Firing**.
 
 Mẫu Prometheus khi đang gây lỗi có p95 1.888 s và avg 0.545 s. Traffic từng instance trong cửa sổ một phút: 172.24.0.4:8000 (5.05 req/s), 172.24.0.8:8000 (5.29 req/s), 172.24.0.9:8000 (5.25 req/s). Input 919.6 token/s, output 487.8 token/s. Prompt gồm câu hỏi và tài liệu truy xuất. Lượng token đầu ra phụ thuộc các lời đáp mock. Nginx trả HTTP/1.1 404 Not Found cho /metrics. Prometheus scrape nội bộ.
 

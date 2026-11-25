@@ -109,7 +109,7 @@ X-XSS-Protection: 1; mode=block
 
 ## Part 3 — Cloud Deployment
 
-`railway.toml` của Part 6 chọn Dockerfile và `/health`. Blueprint Render mô tả cả web service Docker và Key Value trong YAML. `envVars` tạo API key và tham chiếu URL Redis nội bộ. Cả hai tài nguyên dùng gói Free. URL và kết quả smoke test được ghi trong `DEPLOYMENT.md` khi dịch vụ cloud chạy.
+`railway.toml` của Part 6 chọn Dockerfile và `/health`. Blueprint Render mô tả cả web service Docker và Key Value trong YAML. `envVars` tạo API key và tham chiếu URL Redis nội bộ. Cả hai tài nguyên dùng gói Free. Agent đã chạy trên Render và các kết quả HTTP đã kiểm tra được ghi trong `DEPLOYMENT.md`. [URL public](https://day14-agent-6vy4.onrender.com/health)
 
 ### Exercise 3.3 — Cloud Run
 
@@ -207,6 +207,13 @@ Script chấm đầy đủ chạy trong Ubuntu WSL2 với Docker và Redis. Imag
   🎉 PASS 12/12 — PRODUCTION READY! Deploy nào!
 ```
 
+### Mở rộng Part 6
+
+- History theo `session_id` lưu trong Redis. Khi gọi `/ask` và `/ask/stream` qua các replica khác nhau, `GET /sessions/{session_id}` trả đủ hai lượt của cùng phiên.
+- `/ask/stream` trả `text/plain`. Lần kiểm tra qua Nginx nhận được 16 đoạn của câu trả lời mock. Request thiếu key trả HTTP 401.
+- Nginx đã chuyển request đến đủ 3 replica theo `X-Served-By`. Sơ đồ chạy local và lệnh kiểm tra nằm trong [README Part 6](06-lab-complete/README.md#mở-rộng-part-6--history-streaming-và-nginx).
+
 ## AI log
 
-- Yêu cầu Codex đọc hướng dẫn, cấu hình môi trường chạy lab, triển khai Part 6 và thực hiện benchmark. Codex viết bản triển khai, nháp câu trả lời và chạy các phép thử có ghi lại kết quả. Ở Part 7, Codex bổ sung histogram và hai mục kiến thức, rồi sửa `PYTHONUSERBASE` trong Dockerfile để runtime tìm được packages đã cài. Phần tự sửa và tự kiểm tra của học viên cần được ghi bổ sung sau khi thực hiện.
+- Yêu cầu Codex đọc hướng dẫn, cấu hình môi trường chạy lab, triển khai Part 6 và thực hiện benchmark. Codex viết bản triển khai, nháp câu trả lời và chạy các phép thử có ghi lại kết quả. Ở Part 7, Codex bổ sung histogram và hai mục kiến thức, rồi sửa `PYTHONUSERBASE` trong Dockerfile để runtime tìm được packages đã cài. Codex triển khai và kiểm tra thêm history Redis, streaming và Nginx 3 replica cho phần mở rộng Part 6.
+- Học viên triển khai agent trên Render và tự chạy bốn lệnh `curl` trên Ubuntu WSL. Kết quả lần lượt là HTTP 200, 200, 401 và 200.

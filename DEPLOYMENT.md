@@ -2,7 +2,9 @@
 
 **Nền tảng đã chuẩn bị:** Render Free. Blueprint ở `06-lab-complete/render.yaml` cấu hình web service dùng Dockerfile của Part 6 và một Key Value tương thích Redis qua mạng nội bộ.
 
-**Trạng thái:** Railway hết hạn dùng thử. Blueprint Render chờ kết nối bản fork và triển khai. Các mã HTTP dưới đây là tiêu chí kiểm tra cloud.
+**URL public:** [day14-agent-6vy4.onrender.com/health](https://day14-agent-6vy4.onrender.com/health)
+
+**Kiểm tra ngày 25/11/2026 (GMT+7):** `GET /health` trả 200, `GET /ready` trả 200, `POST /ask` thiếu API key trả 401 và `POST /ask` có API key hợp lệ trả 200. Kết quả có API key do học viên xác minh trên Ubuntu WSL. Đường dẫn gốc `/` trả 404 vì agent chưa khai báo route này.
 
 ## Triển khai bằng Blueprint
 
@@ -29,7 +31,7 @@
 Trong terminal Bash, thay giá trị `BASE` bằng URL của service. Mở **day14-agent → Environment** để lấy giá trị `AGENT_API_KEY` mà Render đã tạo. `read -s` ẩn key khi nhập và các lệnh kiểm tra chỉ in HTTP status.
 
 ```bash
-BASE='https://ten-service-cua-ban.onrender.com'
+BASE='https://day14-agent-6vy4.onrender.com'
 read -rsp 'AGENT_API_KEY: ' AGENT_API_KEY
 echo
 curl -sS -o /dev/null -w '%{http_code}\n' "$BASE/health"
@@ -39,4 +41,8 @@ curl -sS -o /dev/null -w '%{http_code}\n' -X POST "$BASE/ask" -H 'Content-Type: 
 unset AGENT_API_KEY
 ```
 
-Kết quả cần xác nhận theo thứ tự `200`, `200`, `401`, `200`. Ảnh deploy cần lưu vào `screenshots/dashboard.png`, `screenshots/running.png` và `screenshots/test.png`.
+## Ảnh minh chứng
+
+- [Dashboard Render](screenshots/dashboard.png)
+- [Service Live trên Render](screenshots/running.png)
+- [Kết quả HTTP 200, 200, 401, 200](screenshots/test.png)

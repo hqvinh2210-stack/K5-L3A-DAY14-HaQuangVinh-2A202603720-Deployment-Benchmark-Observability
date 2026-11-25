@@ -133,6 +133,38 @@ Sau khi deploy: `python check_production_ready.py --public-url <URL>` và ghi UR
 
 ---
 
+## Mở rộng Part 6 — History, streaming và Nginx
+
+- `POST /ask` nhận thêm `session_id` dạng UUID. Các replica lưu chung 20 lượt gần nhất của mỗi phiên trong Redis, với TTL 24 giờ kể từ lượt ghi cuối. `GET /sessions/{session_id}` trả history cho cùng API key. Phiên mới trả danh sách rỗng.
+- `POST /ask/stream` nhận cùng body và API key. Agent kiểm tra rate limit và budget, tạo câu trả lời mock, rồi gửi `text/plain` theo từng đoạn. Nếu có `session_id`, câu hỏi và câu trả lời được lưu chung với `/ask`.
+- `docker-compose.scaling.yml` chạy 3 replica sau Nginx ở `127.0.0.1:8081`. Nginx tắt bộ đệm phản hồi để client nhận từng đoạn stream và trả `X-Served-By` để kiểm tra replica xử lý request.
+
+Trong Ubuntu/WSL, từ `06-lab-complete/`:
+
+```bash
+export AGENT_API_KEY="$(openssl rand -hex 32)"
+compose=(docker compose -p k5-day14-part6-advanced -f docker-compose.yml -f docker-compose.scaling.yml)
+"${compose[@]}" up -d --build --wait
+"${compose[@]}" ps
+
+BASE=http://127.0.0.1:8081
+SESSION_ID=$(python3 -c 'from uuid import uuid4; print(uuid4())')
+
+curl -si "$BASE/ask" -H "X-API-Key: $AGENT_API_KEY" \
+  -H 'Content-Type: application/json' \
+  -d "{\"question\":\"Explain Docker\",\"session_id\":\"$SESSION_ID\"}"
+curl -siN "$BASE/ask/stream" -H "X-API-Key: $AGENT_API_KEY" \
+  -H 'Content-Type: application/json' \
+  -d "{\"question\":\"Explain deployment\",\"session_id\":\"$SESSION_ID\"}"
+printf '\n'
+curl -si "$BASE/sessions/$SESSION_ID" -H "X-API-Key: $AGENT_API_KEY"
+
+"${compose[@]}" down -v
+unset AGENT_API_KEY
+```
+
+Đối chiếu header `X-Served-By` giữa các request và xác nhận `/sessions/{session_id}` trả đủ hai lượt. `curl -N` hiển thị các đoạn stream khi nhận được.
+
 ## Part 7 — Benchmark & Observability
 
 Agent đã chạy được, bước tiếp theo là đo xem nó **nhanh** và **đúng** tới đâu, rồi **giám sát** khi chạy thật:

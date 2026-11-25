@@ -1,11 +1,14 @@
 """Production AI agent for the Day 14 lab."""
 import json
 import logging
+from asyncio import sleep
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 from time import perf_counter
+from uuid import UUID
 
 from fastapi import Depends, FastAPI, HTTPException, Request
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 from redis import RedisError
 
@@ -14,6 +17,7 @@ from app.config import settings
 from app.cost_guard import check_budget, record_cost
 from app.rate_limiter import check_rate_limit
 from app.redis_client import r, redis_healthy
+from app.sessions import read_history, save_turn
 from utils.mock_llm import MOCK_RESPONSES, ask as llm_ask
 
 logger = logging.getLogger("day14.agent")
@@ -55,6 +59,7 @@ app = FastAPI(title="Production AI Agent", lifespan=lifespan)
 
 class AskRequest(BaseModel):
     question: str = Field(..., min_length=1, max_length=2000)
+    session_id: UUID | None = None
 
 
 @app.middleware("http")
@@ -87,8 +92,7 @@ def ready():
     return {"status": "ready"}
 
 
-@app.post("/ask")
-def ask(body: AskRequest, key: str = Depends(verify_api_key)):
+def generate_answer(body: AskRequest, key: str) -> str:
     input_tokens = len(body.question.split())
     try:
         check_rate_limit(key)
@@ -99,6 +103,38 @@ def ask(body: AskRequest, key: str = Depends(verify_api_key)):
             record_cost(reservation, 0, 0)
             raise
         record_cost(reservation, input_tokens, len(answer.split()))
+        if body.session_id is not None:
+            save_turn(key, body.session_id, body.question, answer)
     except RedisError as error:
         raise HTTPException(status_code=503, detail="Redis unavailable") from error
-    return {"question": body.question, "answer": answer}
+    return answer
+
+
+@app.post("/ask")
+def ask(body: AskRequest, key: str = Depends(verify_api_key)):
+    response = {"question": body.question, "answer": generate_answer(body, key)}
+    if body.session_id is not None:
+        response["session_id"] = str(body.session_id)
+    return response
+
+
+async def stream_mock_answer(answer: str):
+    for index, word in enumerate(answer.split(" ")):
+        await sleep(0.05)
+        yield word if index == 0 else " " + word
+
+
+@app.post("/ask/stream")
+def ask_stream(body: AskRequest, key: str = Depends(verify_api_key)):
+    answer = generate_answer(body, key)
+    return StreamingResponse(stream_mock_answer(answer), media_type="text/plain")
+
+
+@app.get("/sessions/{session_id}")
+def get_session(session_id: UUID, key: str = Depends(verify_api_key)):
+    try:
+        check_rate_limit(key)
+        history = read_history(key, session_id)
+    except RedisError as error:
+        raise HTTPException(status_code=503, detail="Redis unavailable") from error
+    return {"session_id": str(session_id), "history": history}
